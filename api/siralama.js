@@ -1,5 +1,6 @@
 export default async function handler(req, res) {
   const KULUP_ID = "chesst-rk";
+  const BASE_API = "https://api." + "://chess.com";
 
   const nowTR = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
   const year = nowTR.getFullYear();
@@ -10,7 +11,7 @@ export default async function handler(req, res) {
   let scores = [];
 
   try {
-    const clubRes = await fetch("https://chess.com" + KULUP_ID + "/members", { headers });
+    const clubRes = await fetch(BASE_API + "club/" + KULUP_ID + "/members", { headers });
     if (clubRes.ok) {
       const clubData = await clubRes.json();
       const allMembers = [
@@ -24,7 +25,7 @@ export default async function handler(req, res) {
       scores = await Promise.all(
         uniqueMembers.map(async (username) => {
           try {
-            const gamesRes = await fetch("https://chess.com" + username + "/games/" + year + "/" + month, { headers });
+            const gamesRes = await fetch(BASE_API + "player/" + username + "/games/" + year + "/" + month, { headers });
             if (!gamesRes.ok) return { username, count: 0 };
             const gamesData = await gamesRes.json();
 
@@ -52,8 +53,9 @@ export default async function handler(req, res) {
 
   const borderColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
   const textColors = ["#ffffff", "#e0e0e0", "#cccccc"];
+  const svgNs = "http://www." + "w3.org/2000/svg";
 
-  let svg = '<svg width="340" height="195" viewBox="0 0 340 195" xmlns="http://w3.org">' +
+  let svg = '<svg width="340" height="195" viewBox="0 0 340 195" xmlns="' + svgNs + '">' +
     '<rect width="340" height="195" rx="14" fill="#1a1a1a" stroke="#333333" stroke-width="1.5"/>' +
     '<text x="170" y="28" fill="#e30a17" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">GÜNÜN EN AKTİFLERİ</text>';
 
