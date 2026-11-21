@@ -2,49 +2,51 @@ export default async function handler(req, res) {
   const KULUP_ID = "chesst-rk";
   const BASE_API = "https://api." + "://chess.com";
 
+  // Kulüp üyeleri API'de henüz güncellenmediyse buradaki oyuncular her zaman taranır:
+  const EKSTRA_UYELER = ["IchBinAhmed0", "GMRwad"];
+
   const nowTR = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
   const year = nowTR.getFullYear();
   const month = String(nowTR.getMonth() + 1).padStart(2, "0");
   const todayStr = `${year}-${month}-${String(nowTR.getDate()).padStart(2, "0")}`;
 
   const headers = { "User-Agent": "Mozilla/5.0 (ChessClubTracker)" };
-  let scores = [];
+  let memberList = [...EKSTRA_UYELER];
 
   try {
     const clubRes = await fetch(BASE_API + "club/" + KULUP_ID + "/members", { headers });
     if (clubRes.ok) {
       const clubData = await clubRes.json();
-      const allMembers = [
+      const apiMembers = [
         ...(clubData.weekly || []),
         ...(clubData.monthly || []),
         ...(clubData.all_time || [])
       ].map(m => m.username);
-
-      const uniqueMembers = [...new Set(allMembers)].slice(0, 30);
-
-      scores = await Promise.all(
-        uniqueMembers.map(async (username) => {
-          try {
-            const gamesRes = await fetch(BASE_API + "player/" + username + "/games/" + year + "/" + month, { headers });
-            if (!gamesRes.ok) return { username, count: 0 };
-            const gamesData = await gamesRes.json();
-
-            const todayCount = (gamesData.games || []).filter((g) => {
-              if (!g.end_time) return false;
-              const gameDate = new Date(g.end_time * 1000).toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
-              return gameDate === todayStr;
-            }).length;
-
-            return { username, count: todayCount };
-          } catch {
-            return { username, count: 0 };
-          }
-        })
-      );
+      memberList = [...memberList, ...apiMembers];
     }
-  } catch (e) {
-    scores = [];
-  }
+  } catch (e) {}
+
+  const uniqueMembers = [...new Set(memberList.map(u => u.toLowerCase()))].slice(0, 30);
+
+  const scores = await Promise.all(
+    uniqueMembers.map(async (username) => {
+      try {
+        const gamesRes = await fetch(BASE_API + "player/" + username + "/games/" + year + "/" + month, { headers });
+        if (!gamesRes.ok) return { username, count: 0 };
+        const gamesData = await gamesRes.json();
+
+        const todayCount = (gamesData.games || []).filter((g) => {
+          if (!g.end_time) return false;
+          const gameDate = new Date(g.end_time * 1000).toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
+          return gameDate === todayStr;
+        }).length;
+
+        return { username, count: todayCount };
+      } catch {
+        return { username, count: 0 };
+      }
+    })
+  );
 
   const top3 = scores.sort((a, b) => b.count - a.count).slice(0, 3);
   while (top3.length < 3) {
