@@ -23,7 +23,7 @@ export default function handler(req, res) {
     cells.push({ day: cells.length - (startOffset + daysInMonth) + 1, current: false });
   }
 
-  let svg = `<svg width="340" height="280" viewBox="0 0 340 280" xmlns="http://w3.org">
+  let svg = `<svg width="340" height="280" viewBox="0 0 340 280" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#4a0408"/>
