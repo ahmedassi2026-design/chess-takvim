@@ -1,3 +1,5 @@
+import { Resvg } from '@resvg/resvg-js';
+
 export default function handler(req, res) {
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
   const year = now.getFullYear();
@@ -24,27 +26,27 @@ export default function handler(req, res) {
   }
 
   let svgContent = `
-  <svg width="320" height="270" viewBox="0 0 320 270" xmlns="http://w3.org">
+  <svg width="340" height="280" viewBox="0 0 340 280" xmlns="http://w3.org">
     <defs>
       <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#4a0408"/>
         <stop offset="100%" stop-color="#141414"/>
       </linearGradient>
     </defs>
-    <rect width="320" height="270" rx="14" fill="url(#bg)" stroke="#8c0810" stroke-width="1.5"/>
-    <text x="160" y="30" fill="#ffffff" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="1.5">${months[month]} ${year}</text>
+    <rect width="340" height="280" rx="14" fill="url(#bg)" stroke="#8c0810" stroke-width="1.5"/>
+    <text x="170" y="30" fill="#ffffff" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">${months[month]} ${year}</text>
   `;
 
   daysHeader.forEach((d, idx) => {
-    const x = 35 + idx * 41.5;
-    svgContent += `<text x="${x}" y="58" fill="#ff3b47" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">${d}</text>`;
+    const x = 38 + idx * 44;
+    svgContent += `<text x="${x}" y="60" fill="#ff3b47" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">${d}</text>`;
   });
 
   cells.forEach((cell, idx) => {
     const col = idx % 7;
     const row = Math.floor(idx / 7);
-    const x = 35 + col * 41.5;
-    const y = 88 + row * 31;
+    const x = 38 + col * 44;
+    const y = 92 + row * 32;
 
     if (cell.isToday) {
       svgContent += `<circle cx="${x}" cy="${y - 4}" r="13" fill="#e30a17"/>`;
@@ -55,7 +57,10 @@ export default function handler(req, res) {
 
   svgContent += `</svg>`;
 
-  res.setHeader("Content-Type", "image/svg+xml");
+  const resvg = new Resvg(svgContent);
+  const pngBuffer = resvg.render().asPng();
+
+  res.setHeader("Content-Type", "image/png");
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.status(200).send(svgContent);
+  res.status(200).send(pngBuffer);
 }
