@@ -1,7 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "@resvg/resvg-js": "^2.6.2",
-    "@fontsource/roboto": "^5.0.8"
-  }
-}
