@@ -1,94 +1,59 @@
-import { Resvg } from '@resvg/resvg-js';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const fontPath = require.resolve('@fontsource/roboto/files/roboto-latin-ext-700-normal.woff2');
+export default function handler(req, res) {
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const today = now.getDate();
 
-export default async function handler(req, res) {
-  const KULUP_ID = "chesst-rk";
+  const months = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+  const daysHeader = ["P", "S", "Ç", "P", "C", "C", "P"];
 
-  try {
-    const nowTR = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
-    const year = nowTR.getFullYear();
-    const month = String(nowTR.getMonth() + 1).padStart(2, "0");
-    const todayStr = `${year}-${month}-${String(nowTR.getDate()).padStart(2, "0")}`;
+  const firstDay = new Date(year, month, 1).getDay();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
 
-    const headers = { "User-Agent": "ChessClubLeaderboard/1.0" };
-
-    const clubRes = await fetch(`https://chess.com{KULUP_ID}/members`, { headers });
-    const clubData = clubRes.ok ? await clubRes.json() : {};
-
-    const allMembers = [
-      ...(clubData.weekly || []),
-      ...(clubData.monthly || []),
-      ...(clubData.all_time || [])
-    ].map(m => m.username);
-
-    const uniqueMembers = [...new Set(allMembers)].slice(0, 40);
-
-    const scores = await Promise.all(
-      uniqueMembers.map(async (username) => {
-        try {
-          const gamesRes = await fetch(
-            `https://chess.com{username}/games/${year}/${month}`,
-            { headers }
-          );
-          if (!gamesRes.ok) return { username, count: 0 };
-          const gamesData = await gamesRes.json();
-
-          const todayCount = (gamesData.games || []).filter((g) => {
-            if (!g.end_time) return false;
-            const gameDate = new Date(g.end_time * 1000).toLocaleDateString("en-CA", {
-              timeZone: "Europe/Istanbul"
-            });
-            return gameDate === todayStr;
-          }).length;
-
-          return { username, count: todayCount };
-        } catch {
-          return { username, count: 0 };
-        }
-      })
-    );
-
-    const top3 = scores.sort((a, b) => b.count - a.count).slice(0, 3);
-    while (top3.length < 3) {
-      top3.push({ username: "Henüz Oyun Yok", count: 0 });
-    }
-
-    const borderColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
-    const textColors = ["#ffffff", "#e0e0e0", "#cccccc"];
-
-    let svg = `
-    <svg width="340" height="195" viewBox="0 0 340 195" xmlns="http://w3.org">
-      <rect width="340" height="195" rx="14" fill="#1a1a1a" stroke="#333333" stroke-width="1.5"/>
-      <text x="170" y="28" fill="#e30a17" font-family="Roboto" font-size="14" font-weight="bold" text-anchor="middle">GÜNÜN EN AKTİFLERİ</text>
-    `;
-
-    top3.forEach((player, i) => {
-      const y = 44 + i * 46;
-      svg += `
-        <rect x="14" y="${y}" width="312" height="38" rx="8" fill="#111111"/>
-        <rect x="14" y="${y}" width="4" height="38" rx="2" fill="${borderColors[i]}"/>
-        <text x="28" y="${y + 24}" fill="${textColors[i]}" font-family="Roboto" font-size="13" font-weight="bold">
-          ${i + 1}. ${player.username}
-        </text>
-        <text x="314" y="${y + 24}" fill="#ff3b47" font-family="Roboto" font-size="12" font-weight="bold" text-anchor="end">
-          ${player.count} Oyun
-        </text>
-      `;
-    });
-
-    svg += `</svg>`;
-
-    const resvg = new Resvg(svg, {
-      font: { fontFiles: [fontPath], loadSystemFonts: false }
-    });
-    const pngBuffer = resvg.render().asPng();
-
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate");
-    res.status(200).send(pngBuffer);
-  } catch (err) {
-    res.status(500).send("Hata olustu");
+  let cells = [];
+  for (let i = startOffset - 1; i >= 0; i--) {
+    cells.push({ day: prevMonthDays - i, current: false });
   }
+  for (let i = 1; i <= daysInMonth; i++) {
+    cells.push({ day: i, current: true, isToday: i === today });
+  }
+  while (cells.length < 42) {
+    cells.push({ day: cells.length - (startOffset + daysInMonth) + 1, current: false });
+  }
+
+  let svg = `<svg width="340" height="280" viewBox="0 0 340 280" xmlns="http://w3.org">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4a0408"/>
+        <stop offset="100%" stop-color="#141414"/>
+      </linearGradient>
+    </defs>
+    <rect width="340" height="280" rx="14" fill="url(#bg)" stroke="#8c0810" stroke-width="1.5"/>
+    <text x="170" y="30" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle">${months[month]} ${year}</text>`;
+
+  daysHeader.forEach((d, idx) => {
+    const x = 38 + idx * 44;
+    svg += `<text x="${x}" y="60" fill="#ff3b47" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle">${d}</text>`;
+  });
+
+  cells.forEach((cell, idx) => {
+    const col = idx % 7;
+    const row = Math.floor(idx / 7);
+    const x = 38 + col * 44;
+    const y = 92 + row * 32;
+
+    if (cell.isToday) {
+      svg += `<circle cx="${x}" cy="${y - 4}" r="13" fill="#e30a17"/>`;
+    }
+    const color = cell.isToday ? "#ffffff" : (cell.current ? "#ffffff" : "#555555");
+    svg += `<text x="${x}" y="${y}" fill="${color}" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle">${cell.day}</text>`;
+  });
+
+  svg += `</svg>`;
+
+  res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.status(200).send(svg);
 }
