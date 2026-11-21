@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/takvim.png", "destination": "/api/takvim" },
-    { "source": "/siralama.png", "destination": "/api/siralama" }
-  ]
-}
